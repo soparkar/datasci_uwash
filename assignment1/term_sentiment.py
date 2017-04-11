@@ -1,17 +1,32 @@
+import json
 import sys
 
-def hw():
-    print 'Hello, world!'
+unknownScoreMap = {}
 
-def lines(fp):
-    print str(len(fp.readlines()))
+def populateKnownScoresMap(afinnfile):
+    scores = {}
+    for line in afinnfile:
+	term, score = line.split("\t")
+	scores[term] = int(score)
+    return scores
+
+def process_tweet_text(text, word_scores):
+    words = text.split()
+    whole_sentiment = sum(word_scores.get(word, 0) for word in words)
+    unknown_words = [w for w in words if w not in word_scores]
+    for uw in unknown_words:
+	current = unknownScoreMap.setdefault(uw, 0)
+	unknownScoreMap[uw] = current + whole_sentiment
 
 def main():
-    sent_file = open(sys.argv[1])
+    word_scores = populateKnownScoresMap(open(sys.argv[1]))
     tweet_file = open(sys.argv[2])
-    hw()
-    lines(sent_file)
-    lines(tweet_file)
+    whole_tweets = [json.loads(line) for line in tweet_file]
+    for wt in whole_tweets:
+	if 'text' in wt.keys():
+	    process_tweet_text(wt['text'], word_scores)
+	    for term, score in unknownScoreMap.iteritems():
+		print term, float(score)
 
 if __name__ == '__main__':
     main()
